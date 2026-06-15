@@ -11,7 +11,7 @@ import {
 const firebaseConfig = {
   apiKey: "AIzaSyCaCPkbi3lmoQcpZqfHVEGf-_k2ghmGLdQ",
   authDomain: "hakuafes-2026-34.firebaseapp.com",
-  databaseURL: "https://hakuafes-2026-34-default-rtdb.firebaseio.com",
+  databaseURL: "https://hakuafes-2026-34-default-rtdb.asia-southeast1.firebasedatabase.app/",
   projectId: "hakuafes-2026-34",
   storageBucket: "hakuafes-2026-34.firebasestorage.app",
   messagingSenderId: "138331403152",
