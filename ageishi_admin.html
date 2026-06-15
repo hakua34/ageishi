@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -57,6 +56,20 @@ button:hover{
     opacity:0.9;
 }
 
+/* 運行ステータスボタン用のスタイル */
+.status-toggle-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 24px;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-bottom: 30px;
+    transition: background 0.3s;
+}
+
 .status{
     text-align:center;
     margin-top:20px;
@@ -74,6 +87,9 @@ button:hover{
 <label>通常列人数</label>
 <input type="number" id="normalPeople" value="0">
 
+<label>運行ステータス</label>
+<button type="button" id="statusButton" class="status-toggle-btn" style="background:#00cc66;">運行中</button>
+
 <label>シングルライダー人数</label>
 <input type="number" id="singlePeople" value="0">
 
@@ -88,11 +104,54 @@ button:hover{
 
 <script type="module">
 
-import { db, ref, set } from "./firebase.js";
+import { db, ref, set, onValue } from "./firebase.js";
 
-const button = document.getElementById("updateButton");
+const updateButton = document.getElementById("updateButton");
+const statusButton = document.getElementById("statusButton");
 
-button.addEventListener("click", async () => {
+let isSuspended = false;
+
+// データベースの現在の状態を監視して、管理画面の初期値に反映する
+onValue(ref(db, "waitData"), (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+
+    // 入力欄に現在の値をセット（上書きを防ぎ、現在の状態を可視化するため）
+    if (document.activeElement !== document.getElementById("normalPeople")) {
+        document.getElementById("normalPeople").value = data.normalPeople ?? 0;
+    }
+    if (document.activeElement !== document.getElementById("singlePeople")) {
+        document.getElementById("singlePeople").value = data.singlePeople ?? 0;
+    }
+    if (document.activeElement !== document.getElementById("ticketTime")) {
+        document.getElementById("ticketTime").value = data.ticketTime ?? "14:00";
+    }
+
+    // ステータスボタンの表示更新
+    isSuspended = data.isSuspended || false;
+    if (isSuspended) {
+        statusButton.innerText = "一時休止中";
+        statusButton.style.background = "#ff3333";
+    } else {
+        statusButton.innerText = "運行中";
+        statusButton.style.background = "#00cc66";
+    }
+});
+
+// 運行ステータスボタンがクリックされたらトグル（切り替え）する
+statusButton.addEventListener("click", () => {
+    isSuspended = !isSuspended;
+    if (isSuspended) {
+        statusButton.innerText = "一時休止中";
+        statusButton.style.background = "#ff3333";
+    } else {
+        statusButton.innerText = "運行中";
+        statusButton.style.background = "#00cc66";
+    }
+});
+
+// 更新ボタンを押した時にまとめてFirebaseへ送信
+updateButton.addEventListener("click", async () => {
 
     const normalPeople =
         Number(document.getElementById("normalPeople").value);
@@ -107,11 +166,16 @@ button.addEventListener("click", async () => {
         normalPeople,
         singlePeople,
         ticketTime,
+        isSuspended,
         updatedAt: new Date().toLocaleTimeString("ja-JP")
     });
 
     document.getElementById("status").innerText =
         "更新しました";
+    
+    setTimeout(() => {
+        document.getElementById("status").innerText = "";
+    }, 3000);
 });
 
 </script>
