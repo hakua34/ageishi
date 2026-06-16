@@ -1,284 +1,339 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>待ち時間表示</title>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
+  <title>待ち時間表示</title>
 
-<style>
-body{
-    margin:0;
-    background:white;
-    color:black;
-    font-family:sans-serif;
-    overflow: hidden; /* 画面全体のスクロールを完全に禁止 */
-}
+  <style>
+    body {
+      margin: 0;
+      background: white;
+      color: black;
+      font-family: sans-serif;
+      overflow: hidden;
+    }
 
-.container{
-    width:100vw;
-    height:100vh; /* 画面の高さぴったりに固定 */
-    display:flex;
-    flex-direction:column;
-    justify-content: space-between;
-    box-sizing: border-box;
-}
-
-.title{
-    text-align:center;
-    font-size: 5vw; 
-    font-weight:bold;
-    padding:20px 10px;
-}
-
-.main{
-    flex:1;
-    display:flex;
-    justify-content:space-around;
-    align-items:center;
-    padding:10px;
-}
-
-.block{
-    width:42%;
-    text-align:center;
-}
-
-.label{
-    font-size: 3vw;
-    margin-bottom:15px;
-}
-
-.timeBox{
-    background:black;
-    border-radius:25px;
-    padding:30px 10px;
-    color:#00cc66;
-    font-size: 7vw;
-    font-weight:bold;
-}
-
-.ticketArea{
-    text-align:center;
-    padding:20px 10px;
-    background:#f0f0f0;
-}
-
-.ticketTitle{
-    font-size: 2.5vw;
-    margin-bottom:10px;
-}
-
-.ticketTime{
-    font-size: 6vw;
-    font-weight:bold;
-}
-
-.updateTime{
-    position:fixed;
-    bottom:10px;
-    right:20px;
-    color:#666;
-    font-size:14px;
-}
-
-/* ========================================================
-   一時休止用の画面オーバーレイ（白基調・背景指定値）
-   ======================================================== */
-.overlay {
-    display: none; 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100vw; 
-    height: 100vh; 
-    background: rgba(255, 255, 255, 0.95); /* 指示通りの白基調 */
-    color: black; /* 文字は黒に変更 */
-    z-index: 9999; 
-    justify-content: center; 
-    align-items: center; 
-    flex-direction: column;
-    padding: 20px;
-    box-sizing: border-box;
-    text-align: center;
-}
-
-/* ========================================================
-   タブレット縦向き・スマホ用のレスポンシブ設定 (画面幅768px以下)
-   ======================================================== */
-@media (max-width: 768px) {
     .container {
-        padding: 10px 0; /* 全体の内側余白をタイトに */
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
     }
 
     .title {
-        font-size: 24px;
-        padding: 5px 5px 0px 5px; /* 上下の余白を極限までカット */
-    }
-    
-    .main {
-        flex-direction: column; 
-        justify-content: center;
-        gap: 10px; /* ブロック間の隙間を狭く */
-        padding: 5px;
-    }
-    
-    .block {
-        width: 90%; 
-    }
-    
-    .label {
-        font-size: 18px; /* 文字を少しだけシャープに */
-        margin-bottom: 4px;
-    }
-    
-    .timeBox {
-        font-size: 38px; /* 高さを抑えるためにフォントサイズを調整 */
-        padding: 10px 0;
-        border-radius: 15px;
-    }
-    
-    .ticketArea {
-        padding: 10px 5px; /* 整理券エリアもコンパクトに */
-        margin-bottom: 15px; /* Last Updateとの被り防止の隙間 */
-    }
-    
-    .ticketTitle {
-        font-size: 16px;
-        margin-bottom: 2px;
-    }
-    
-    .ticketTime {
-        font-size: 32px;
-    }
-    
-    .updateTime {
-        font-size: 11px;
-        bottom: 2px;
-        right: 10px;
-        background: rgba(255, 255, 255, 0.8); 
-        padding: 1px 4px;
+      text-align: center;
+      font-size: 5vw;
+      font-weight: bold;
+      padding: 20px 10px;
     }
 
-    /* 一時休止画面（スマホ版・白基調用） */
-    .overlay .overlay-title {
-        font-size: 38px !important;
+    .main {
+      flex: 1;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 10px;
     }
-    .overlay .overlay-text1 {
-        font-size: 18px !important;
-        color: #333 !important;
+
+    .block {
+      width: 42%;
+      text-align: center;
     }
-    .overlay .overlay-text2 {
-        font-size: 16px !important;
-        color: #666 !important;
+
+    .label {
+      font-size: 3vw;
+      margin-bottom: 15px;
     }
-}
-</style>
+
+    .timeBox {
+      background: black;
+      border-radius: 25px;
+      padding: 30px 10px;
+      color: #00cc66;
+      font-size: 7vw;
+      font-weight: bold;
+    }
+
+    .ticketArea {
+      text-align: center;
+      padding: 20px 10px;
+      background: #f0f0f0;
+    }
+
+    .ticketTitle {
+      font-size: 2.5vw;
+      margin-bottom: 10px;
+    }
+
+    .ticketTime {
+      font-size: 6vw;
+      font-weight: bold;
+    }
+
+    .updateTime {
+      position: fixed;
+      bottom: 10px;
+      right: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    /* 一時休止オーバーレイ */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+
+      background: rgba(255, 255, 255, 0.95);
+      color: #333;
+
+      z-index: 9999;
+
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    /* スマホ・タブレット */
+    @media (max-width: 768px) {
+
+      .title {
+        font-size: 6vw;
+        padding: 10px 5px 5px;
+      }
+
+      .main {
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+        padding: 5px;
+      }
+
+      .block {
+        width: 85%;
+      }
+
+      .label {
+        font-size: 4.5vw;
+        margin-bottom: 4px;
+      }
+
+      .timeBox {
+        font-size: 10vw;
+        padding: 12px 0;
+        border-radius: 15px;
+      }
+
+      .ticketArea {
+        padding: 10px 5px;
+        margin-bottom: 25px;
+      }
+
+      .ticketTitle {
+        font-size: 4vw;
+        margin-bottom: 2px;
+      }
+
+      .ticketTime {
+        font-size: 9vw;
+      }
+
+      .updateTime {
+        font-size: 11px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 2px 5px;
+        border-radius: 3px;
+
+        bottom: 5px;
+        right: 10px;
+      }
+
+      .overlay .overlay-title {
+        font-size: 10vw !important;
+        margin-bottom: 15px !important;
+      }
+
+      .overlay .overlay-text1 {
+        font-size: 5vw !important;
+        margin-bottom: 10px !important;
+      }
+
+      .overlay .overlay-text2 {
+        font-size: 4.5vw !important;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<div id="suspensionOverlay" class="overlay">
-    <div class="overlay-title" style="font-size: 80px; font-weight: bold; color: #dc3545; margin-bottom: 20px;">⚠️ 一時休止中</div>
-    <div class="overlay-text1" style="font-size: 36px; font-weight: bold; margin-bottom: 15px;">ただいま安全点検を行っております。</div>
-    <div class="overlay-text2" style="font-size: 30px; color: #555;">運転再開までしばらくお待ちください。</div>
-</div>
-
-<div class="container">
-
-<div class="title">
-揚石体内探検隊　待ち時間
-</div>
-
-<div class="main">
-
-<div class="block">
-    <div class="label">
-        通常（2人1組）
+  <div id="suspensionOverlay" class="overlay">
+    <div
+      class="overlay-title"
+      style="font-size:70px;font-weight:bold;color:#dc3545;margin-bottom:25px;"
+    >
+      ⚠️ 一時休止中
     </div>
 
-    <div class="timeBox" id="normalWait">
-        約0分
-    </div>
-</div>
-
-<div class="block">
-    <div class="label">
-        シングルライダー
+    <div
+      class="overlay-text1"
+      style="font-size:32px;font-weight:bold;margin-bottom:15px;"
+    >
+      ただいま安全点検（または調整）を行っております。
     </div>
 
-    <div class="timeBox" id="singleWait">
-        約0分
+    <div
+      class="overlay-text2"
+      style="font-size:26px;color:#666;"
+    >
+      運転再開までしばらくお待ちください。
     </div>
-</div>
+  </div>
 
-</div>
+  <div class="container">
 
-<div class="ticketArea">
+    <div class="title">
+      揚石体内探検隊　待ち時間
+    </div>
 
-<div class="ticketTitle">
-現在案内中の整理券
-</div>
+    <div class="main">
 
-<div class="ticketTime" id="ticketTime">
-14:00
-</div>
+      <div class="block">
+        <div class="label">
+          通常（2人1組）
+        </div>
 
-</div>
+        <div class="timeBox" id="normalWait">
+          約0分
+        </div>
+      </div>
 
-<div class="updateTime" id="updateTime">
-Last Update --
-</div>
+      <div class="block">
+        <div class="label">
+          シングルライダー
+        </div>
 
-</div>
+        <div class="timeBox" id="singleWait">
+          約0分
+        </div>
+      </div>
 
-<script type="module">
+    </div>
 
-import { db, ref, onValue } from "./firebase.js";
+    <div class="ticketArea">
 
-const normalWait = document.getElementById("normalWait");
-const singleWait = document.getElementById("singleWait");
-const ticketTime = document.getElementById("ticketTime");
-const updateTime = document.getElementById("updateTime");
-const overlay = document.getElementById("suspensionOverlay");
+      <div class="ticketTitle">
+        現在案内中の整理券
+      </div>
 
-function calcNormal(people){
-    return Math.max(5, Math.ceil(people / 8) * 5);
-}
+      <div class="ticketTime" id="ticketTime">
+        14:00
+      </div>
 
-function calcSingle(people){
-    return Math.max(5, Math.ceil(people / 4) * 5);
-}
+    </div>
 
-function getColor(minutes){
-    if(minutes <= 20){ return "#00cc66"; }
-    if(minutes <= 40){ return "#ffcc00"; }
-    return "#ff8800";
-}
+    <div class="updateTime" id="updateTime">
+      Last Update --
+    </div>
 
-onValue(ref(db, "waitData"), (snapshot) => {
-    const data = snapshot.val();
-    if(!data) return;
+  </div>
 
-    if (data.isSuspended) {
-        overlay.style.display = "flex";
-    } else {
-        overlay.style.display = "none";
+  <script type="module">
+
+    import {
+      db,
+      ref,
+      onValue
+    } from "./firebase.js";
+
+    const normalWait =
+      document.getElementById("normalWait");
+
+    const singleWait =
+      document.getElementById("singleWait");
+
+    const ticketTime =
+      document.getElementById("ticketTime");
+
+    const updateTime =
+      document.getElementById("updateTime");
+
+    const overlay =
+      document.getElementById("suspensionOverlay");
+
+    function calcNormal(people) {
+      return Math.max(
+        5,
+        Math.ceil(people / 8) * 5
+      );
     }
 
-    const normalMinutes = calcNormal(data.normalPeople);
-    const singleMinutes = calcSingle(data.singlePeople);
+    function calcSingle(people) {
+      return Math.max(
+        5,
+        Math.ceil(people / 4) * 5
+      );
+    }
 
-    normalWait.innerText = `約${normalMinutes}分`;
-    singleWait.innerText = `約${singleMinutes}分`;
+    function getColor(minutes) {
+      if (minutes <= 20) return "#00cc66";
+      if (minutes <= 40) return "#ffcc00";
+      return "#ff8800";
+    }
 
-    normalWait.style.color = getColor(normalMinutes);
-    singleWait.style.color = getColor(singleMinutes);
+    onValue(
+      ref(db, "waitData"),
+      (snapshot) => {
 
-    ticketTime.innerText = data.ticketTime;
-    updateTime.innerText = `Last Update ${data.updatedAt}`;
-});
+        const data =
+          snapshot.val();
 
-</script>
+        if (!data) return;
+
+        overlay.style.display =
+          data.isSuspended
+            ? "flex"
+            : "none";
+
+        const normalMinutes =
+          calcNormal(data.normalPeople);
+
+        const singleMinutes =
+          calcSingle(data.singlePeople);
+
+        normalWait.innerText =
+          `約${normalMinutes}分`;
+
+        singleWait.innerText =
+          `約${singleMinutes}分`;
+
+        normalWait.style.color =
+          getColor(normalMinutes);
+
+        singleWait.style.color =
+          getColor(singleMinutes);
+
+        ticketTime.innerText =
+          data.ticketTime;
+
+        updateTime.innerText =
+          `Last Update ${data.updatedAt}`;
+      }
+    );
+
+  </script>
 
 </body>
 </html>
