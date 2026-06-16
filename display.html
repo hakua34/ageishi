@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>待ち時間表示</title>
 
 <style>
@@ -11,20 +11,21 @@ body{
     background:white;
     color:black;
     font-family:sans-serif;
-    overflow-x: hidden;
+    overflow: hidden; /* 画面全体のスクロールを完全に禁止 */
 }
 
 .container{
     width:100vw;
-    min-height:100vh;
+    height:100vh; /* 画面の高さぴったりに固定 */
     display:flex;
     flex-direction:column;
     justify-content: space-between;
+    box-sizing: border-box;
 }
 
 .title{
     text-align:center;
-    font-size: 5vw; /* 画面幅に応じて可変（PC/タブレット用） */
+    font-size: 5vw; 
     font-weight:bold;
     padding:20px 10px;
 }
@@ -80,6 +81,9 @@ body{
     font-size:14px;
 }
 
+/* ========================================================
+   一時休止用の画面オーバーレイ（白基調・背景指定値）
+   ======================================================== */
 .overlay {
     display: none; 
     position: fixed; 
@@ -87,8 +91,8 @@ body{
     left: 0; 
     width: 100vw; 
     height: 100vh; 
-    background: rgba(0, 0, 0, 0.95); 
-    color: white; 
+    background: rgba(255, 255, 255, 0.95); /* 指示通りの白基調 */
+    color: black; /* 文字は黒に変更 */
     z-index: 9999; 
     justify-content: center; 
     align-items: center; 
@@ -102,61 +106,70 @@ body{
    タブレット縦向き・スマホ用のレスポンシブ設定 (画面幅768px以下)
    ======================================================== */
 @media (max-width: 768px) {
+    .container {
+        padding: 10px 0; /* 全体の内側余白をタイトに */
+    }
+
     .title {
-        font-size: 28px;
-        padding: 15px 5px;
+        font-size: 24px;
+        padding: 5px 5px 0px 5px; /* 上下の余白を極限までカット */
     }
     
     .main {
-        flex-direction: column; /* 縦並びに変更 */
+        flex-direction: column; 
         justify-content: center;
-        gap: 20px; /* ブロック間の隙間 */
+        gap: 10px; /* ブロック間の隙間を狭く */
+        padding: 5px;
     }
     
     .block {
-        width: 90%; /* 横幅いっぱいに広げる */
+        width: 90%; 
     }
     
     .label {
-        font-size: 22px;
-        margin-bottom: 8px;
+        font-size: 18px; /* 文字を少しだけシャープに */
+        margin-bottom: 4px;
     }
     
     .timeBox {
-        font-size: 50px;
-        padding: 15px 0;
+        font-size: 38px; /* 高さを抑えるためにフォントサイズを調整 */
+        padding: 10px 0;
         border-radius: 15px;
     }
     
     .ticketArea {
-        padding: 15px 5px;
+        padding: 10px 5px; /* 整理券エリアもコンパクトに */
+        margin-bottom: 15px; /* Last Updateとの被り防止の隙間 */
     }
     
     .ticketTitle {
-        font-size: 18px;
-        margin-bottom: 5px;
+        font-size: 16px;
+        margin-bottom: 2px;
     }
     
     .ticketTime {
-        font-size: 40px;
+        font-size: 32px;
     }
     
     .updateTime {
-        font-size: 12px;
-        background: rgba(255, 255, 255, 0.8); /* 文字が被っても読めるように背景追加 */
-        padding: 2px 5px;
-        border-radius: 3px;
+        font-size: 11px;
+        bottom: 2px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.8); 
+        padding: 1px 4px;
     }
 
-    /* 一時休止画面の文字サイズもスマホ用に調整 */
+    /* 一時休止画面（スマホ版・白基調用） */
     .overlay .overlay-title {
-        font-size: 45px !important;
+        font-size: 38px !important;
     }
     .overlay .overlay-text1 {
-        font-size: 20px !important;
+        font-size: 18px !important;
+        color: #333 !important;
     }
     .overlay .overlay-text2 {
-        font-size: 18px !important;
+        font-size: 16px !important;
+        color: #666 !important;
     }
 }
 </style>
@@ -165,9 +178,9 @@ body{
 <body>
 
 <div id="suspensionOverlay" class="overlay">
-    <div class="overlay-title" style="font-size: 80px; font-weight: bold; color: #ff3333; margin-bottom: 20px;">⚠️ 一時休止中</div>
-    <div class="overlay-text1" style="font-size: 36px; color: #eee; margin-bottom: 15px;">ただいま安全点検（または調整）を行っております。</div>
-    <div class="overlay-text2" style="font-size: 30px; color: #bbb;">運転再開までしばらくお待ちください。</div>
+    <div class="overlay-title" style="font-size: 80px; font-weight: bold; color: #dc3545; margin-bottom: 20px;">⚠️ 一時休止中</div>
+    <div class="overlay-text1" style="font-size: 36px; font-weight: bold; margin-bottom: 15px;">ただいま安全点検を行っております。</div>
+    <div class="overlay-text2" style="font-size: 30px; color: #555;">運転再開までしばらくお待ちください。</div>
 </div>
 
 <div class="container">
