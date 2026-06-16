@@ -2,40 +2,46 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>管理画面</title>
 
 <style>
 body{
     font-family:sans-serif;
     background:#f5f5f5;
-    padding:40px;
+    padding:20px; /* スマホ用に余白を少し縮小 */
+    margin:0;
 }
 
 .container{
+    width:100%;
     max-width:500px;
-    margin:auto;
+    margin:20px auto;
     background:white;
-    padding:30px;
+    padding:20px; /* スマホ用に内側余白を調整 */
     border-radius:20px;
     box-shadow:0 0 15px rgba(0,0,0,0.1);
+    box-sizing:border-box;
 }
 
 h1{
     text-align:center;
-    margin-bottom:40px;
+    margin-bottom:30px;
+    font-size:24px; /* スマホで見やすいサイズ */
 }
 
 label{
-    font-size:20px;
+    font-size:18px;
     font-weight:bold;
+    display:block;
 }
 
 input{
     width:100%;
-    font-size:28px;
-    padding:15px;
-    margin-top:10px;
-    margin-bottom:30px;
+    font-size:22px; /* スマホのキーボードが出ても扱いやすいサイズ */
+    padding:12px;
+    margin-top:8px;
+    margin-bottom:24px;
     border-radius:10px;
     border:1px solid #ccc;
     box-sizing:border-box;
@@ -43,37 +49,38 @@ input{
 
 button{
     width:100%;
-    padding:20px;
-    font-size:28px;
+    padding:15px;
+    font-size:22px;
     border:none;
     border-radius:15px;
     background:black;
     color:white;
     cursor:pointer;
+    box-sizing:border-box;
 }
 
 button:hover{
     opacity:0.9;
 }
 
-/* 運行ステータスボタン用のスタイル */
 .status-toggle-btn {
     width: 100%;
-    padding: 15px;
-    font-size: 24px;
+    padding: 12px;
+    font-size: 20px;
     border: none;
     border-radius: 10px;
     color: white;
     cursor: pointer;
-    margin-top: 10px;
-    margin-bottom: 30px;
+    margin-top: 8px;
+    margin-bottom: 24px;
     transition: background 0.3s;
+    box-sizing:border-box;
 }
 
 .status{
     text-align:center;
     margin-top:20px;
-    font-size:18px;
+    font-size:16px;
 }
 </style>
 </head>
@@ -111,12 +118,10 @@ const statusButton = document.getElementById("statusButton");
 
 let isSuspended = false;
 
-// データベースの現在の状態を監視して、管理画面の初期値に反映する
 onValue(ref(db, "waitData"), (snapshot) => {
     const data = snapshot.val();
     if (!data) return;
 
-    // 入力欄に現在の値をセット（上書きを防ぎ、現在の状態を可視化するため）
     if (document.activeElement !== document.getElementById("normalPeople")) {
         document.getElementById("normalPeople").value = data.normalPeople ?? 0;
     }
@@ -127,7 +132,6 @@ onValue(ref(db, "waitData"), (snapshot) => {
         document.getElementById("ticketTime").value = data.ticketTime ?? "14:00";
     }
 
-    // ステータスボタンの表示更新
     isSuspended = data.isSuspended || false;
     if (isSuspended) {
         statusButton.innerText = "一時休止中";
@@ -138,7 +142,6 @@ onValue(ref(db, "waitData"), (snapshot) => {
     }
 });
 
-// 運行ステータスボタンがクリックされたらトグル（切り替え）する
 statusButton.addEventListener("click", () => {
     isSuspended = !isSuspended;
     if (isSuspended) {
@@ -150,17 +153,10 @@ statusButton.addEventListener("click", () => {
     }
 });
 
-// 更新ボタンを押した時にまとめてFirebaseへ送信
 updateButton.addEventListener("click", async () => {
-
-    const normalPeople =
-        Number(document.getElementById("normalPeople").value);
-
-    const singlePeople =
-        Number(document.getElementById("singlePeople").value);
-
-    const ticketTime =
-        document.getElementById("ticketTime").value;
+    const normalPeople = Number(document.getElementById("normalPeople").value);
+    const singlePeople = Number(document.getElementById("singlePeople").value);
+    const ticketTime = document.getElementById("ticketTime").value;
 
     await set(ref(db, "waitData"), {
         normalPeople,
@@ -170,8 +166,7 @@ updateButton.addEventListener("click", async () => {
         updatedAt: new Date().toLocaleTimeString("ja-JP")
     });
 
-    document.getElementById("status").innerText =
-        "更新しました";
+    document.getElementById("status").innerText = "更新しました";
     
     setTimeout(() => {
         document.getElementById("status").innerText = "";
