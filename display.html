@@ -11,18 +11,36 @@ body{
     background:white;
     color:black;
     font-family:sans-serif;
-    overflow: hidden; /* 1画面に収めるため画面全体のスクロールを禁止 */
+    overflow: hidden; 
 }
 
 .container{
     width:100vw;
-    /* Safariのツールバー対策としてdvh（Dynamic vh）を採用 */
     height: 100vh;
     height: 100dvh; 
     display:flex;
     flex-direction:column;
     justify-content: space-between;
     box-sizing: border-box;
+}
+
+/* 追加：動画表示用のコンテナ（初期状態は非表示） */
+.video-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background: black;
+    z-index: 5000;
+}
+
+.video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* 動画の比率を保ったまま画面に収める */
 }
 
 .title{
@@ -83,7 +101,6 @@ body{
     font-size:14px;
 }
 
-/* 白基調に変更した一時休止用の画面オーバーレイ */
 .overlay {
     display: none; 
     position: fixed; 
@@ -91,9 +108,9 @@ body{
     left: 0; 
     width: 100vw; 
     height: 100vh;
-    height: 100dvh; /* ここもSafari対策 */
-    background: rgba(255, 255, 255, 0.95); /* ご指定の白基調 */
-    color: black; /* 文字を黒に */
+    height: 100dvh;
+    background: rgba(255, 255, 255, 0.95); 
+    color: black; 
     z-index: 9999; 
     justify-content: center; 
     align-items: center; 
@@ -103,23 +120,19 @@ body{
     text-align: center;
 }
 
-/* ========================================================
-   タブレット縦向き・スマホ用のレスポンシブ設定 (画面幅768px以下)
-   ======================================================== */
 @media (max-width: 768px) {
     .title {
         font-size: 24px;
         padding: 10px 5px;
     }
     
-    /* 大幅に幅を取っていた .main の要素を限界まで詰める */
     .main {
         flex-direction: column; 
         justify-content: center;
         align-items: center;
         flex: 1;
         padding: 0px 10px;
-        gap: 10px; /* 要素間の隙間を狭く */
+        gap: 10px; 
     }
     
     .block {
@@ -132,14 +145,14 @@ body{
     }
     
     .timeBox {
-        font-size: 36px; /* 文字を少し小さく */
-        padding: 8px 0;  /* 上下クッションを縮小 */
+        font-size: 36px; 
+        padding: 8px 0;  
         border-radius: 12px;
     }
     
     .ticketArea {
-        padding: 10px 5px; /* 上下を縮小 */
-        margin-bottom: 20px; /* Last Updateの文字と被らないための余白 */
+        padding: 10px 5px; 
+        margin-bottom: 20px; 
     }
     
     .ticketTitle {
@@ -159,7 +172,6 @@ body{
         padding: 1px 4px;
     }
 
-    /* 一時休止画面（スマホ版・白基調用） */
     .overlay .overlay-title {
         font-size: 36px !important;
         margin-bottom: 15px !important;
@@ -179,13 +191,17 @@ body{
 
 <body>
 
+<div id="videoContainer" class="video-container">
+    <video id="safetyVideo" src="safety-video.mp4" playsinline muted></video>
+</div>
+
 <div id="suspensionOverlay" class="overlay">
     <div class="overlay-title" style="font-size: 80px; font-weight: bold; color: #ff3333; margin-bottom: 20px;">⚠️ 一時休止中</div>
     <div class="overlay-text1" style="font-size: 36px; color: #333; margin-bottom: 15px;">ただいま安全点検（または調整）を行っております。</div>
     <div class="overlay-text2" style="font-size: 30px; color: #666;">運転再開までしばらくお待ちください。</div>
 </div>
 
-<div class="container">
+<div id="mainContainer" class="container">
 
 <div class="title">
 揚石体内探検隊　待ち時間
@@ -243,6 +259,11 @@ const ticketTime = document.getElementById("ticketTime");
 const updateTime = document.getElementById("updateTime");
 const overlay = document.getElementById("suspensionOverlay");
 
+// 追加：動画切り替え用の要素取得
+const mainContainer = document.getElementById("mainContainer");
+const videoContainer = document.getElementById("videoContainer");
+const safetyVideo = document.getElementById("safetyVideo");
+
 function calcNormal(people){
     return Math.max(5, Math.ceil(people / 8) * 5);
 }
@@ -257,12 +278,15 @@ function getColor(minutes){
     return "#ff8800";
 }
 
+// 既存のFirebase監視
 onValue(ref(db, "waitData"), (snapshot) => {
     const data = snapshot.val();
     if(!data) return;
 
     if (data.isSuspended) {
         overlay.style.display = "flex";
+        // 一時休止中は動画を止めて待ち時間（の裏側）に戻す
+        stopVideo();
     } else {
         overlay.style.display = "none";
     }
@@ -279,6 +303,41 @@ onValue(ref(db, "waitData"), (snapshot) => {
     ticketTime.innerText = data.ticketTime;
     updateTime.innerText = `Last Update ${data.updatedAt}`;
 });
+
+// ========================================================
+// 追加：動画の再生・停止・切り替えロジック
+// ========================================================
+
+const DISPLAY_TIME = 5 * 60 * 1000; // 待ち時間を表示する時間（5分 = 300,000ms）
+let isSuspendedState = false;
+
+// 動画を再生して画面を切り替える関数
+function startVideo() {
+    // スマホ画面（幅768px以下）のとき、または一時休止中のときは動画を流さない
+    if (window.innerWidth <= 768 || overlay.style.display === "flex") return;
+
+    videoContainer.style.display = "block";
+    safetyVideo.play().catch(err => {
+        console.log("自動再生がブロックされました。画面を一度クリックしてください:", err);
+    });
+}
+
+// 動画を止めて待ち時間表示に戻す関数
+function stopVideo() {
+    safetyVideo.pause();
+    safetyVideo.currentTime = 0;
+    videoContainer.style.display = "none";
+}
+
+// 動画が終了した時のイベントリスナー
+safetyVideo.addEventListener("ended", () => {
+    stopVideo();
+});
+
+// 5分ごとに動画を起動するタイマーをセット
+setInterval(() => {
+    startVideo();
+}, DISPLAY_TIME);
 
 </script>
 
