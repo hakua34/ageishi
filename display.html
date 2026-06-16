@@ -2,29 +2,31 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>待ち時間表示</title>
 
 <style>
-
 body{
     margin:0;
     background:white;
     color:black;
     font-family:sans-serif;
+    overflow-x: hidden;
 }
 
 .container{
     width:100vw;
-    height:100vh;
+    min-height:100vh;
     display:flex;
     flex-direction:column;
+    justify-content: space-between;
 }
 
 .title{
     text-align:center;
-    font-size:60px;
+    font-size: 5vw; /* 画面幅に応じて可変（PC/タブレット用） */
     font-weight:bold;
-    padding:30px 0;
+    padding:20px 10px;
 }
 
 .main{
@@ -32,40 +34,41 @@ body{
     display:flex;
     justify-content:space-around;
     align-items:center;
+    padding:10px;
 }
 
 .block{
-    width:40%;
+    width:42%;
     text-align:center;
 }
 
 .label{
-    font-size:40px;
-    margin-bottom:30px;
+    font-size: 3vw;
+    margin-bottom:15px;
 }
 
 .timeBox{
     background:black;
     border-radius:25px;
-    padding:40px;
+    padding:30px 10px;
     color:#00cc66;
-    font-size:100px;
+    font-size: 7vw;
     font-weight:bold;
 }
 
 .ticketArea{
     text-align:center;
-    padding:40px;
+    padding:20px 10px;
     background:#f0f0f0;
 }
 
 .ticketTitle{
-    font-size:36px;
-    margin-bottom:20px;
+    font-size: 2.5vw;
+    margin-bottom:10px;
 }
 
 .ticketTime{
-    font-size:80px;
+    font-size: 6vw;
     font-weight:bold;
 }
 
@@ -74,10 +77,9 @@ body{
     bottom:10px;
     right:20px;
     color:#666;
-    font-size:18px;
+    font-size:14px;
 }
 
-/* 一時休止用の画面オーバーレイ */
 .overlay {
     display: none; 
     position: fixed; 
@@ -85,23 +87,87 @@ body{
     left: 0; 
     width: 100vw; 
     height: 100vh; 
-    background: rgba(250, 250, 250, 0.95); 
+    background: rgba(0, 0, 0, 0.95); 
     color: white; 
     z-index: 9999; 
     justify-content: center; 
     align-items: center; 
     flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+    text-align: center;
 }
 
+/* ========================================================
+   タブレット縦向き・スマホ用のレスポンシブ設定 (画面幅768px以下)
+   ======================================================== */
+@media (max-width: 768px) {
+    .title {
+        font-size: 28px;
+        padding: 15px 5px;
+    }
+    
+    .main {
+        flex-direction: column; /* 縦並びに変更 */
+        justify-content: center;
+        gap: 20px; /* ブロック間の隙間 */
+    }
+    
+    .block {
+        width: 90%; /* 横幅いっぱいに広げる */
+    }
+    
+    .label {
+        font-size: 22px;
+        margin-bottom: 8px;
+    }
+    
+    .timeBox {
+        font-size: 50px;
+        padding: 15px 0;
+        border-radius: 15px;
+    }
+    
+    .ticketArea {
+        padding: 15px 5px;
+    }
+    
+    .ticketTitle {
+        font-size: 18px;
+        margin-bottom: 5px;
+    }
+    
+    .ticketTime {
+        font-size: 40px;
+    }
+    
+    .updateTime {
+        font-size: 12px;
+        background: rgba(255, 255, 255, 0.8); /* 文字が被っても読めるように背景追加 */
+        padding: 2px 5px;
+        border-radius: 3px;
+    }
+
+    /* 一時休止画面の文字サイズもスマホ用に調整 */
+    .overlay .overlay-title {
+        font-size: 45px !important;
+    }
+    .overlay .overlay-text1 {
+        font-size: 20px !important;
+    }
+    .overlay .overlay-text2 {
+        font-size: 18px !important;
+    }
+}
 </style>
 </head>
 
 <body>
 
 <div id="suspensionOverlay" class="overlay">
-    <div style="font-size: 90px; font-weight: bold; color: #ff3333; margin-bottom: 30px;">⚠️ 一時休止中</div>
-    <div style="font-size: 40px; color: #262525; margin-bottom: 15px;">ただいま安全点検（または調整）を行っております。</div>
-    <div style="font-size: 36px; color: #615f5f;">運転再開までしばらくお待ちください。</div>
+    <div class="overlay-title" style="font-size: 80px; font-weight: bold; color: #ff3333; margin-bottom: 20px;">⚠️ 一時休止中</div>
+    <div class="overlay-text1" style="font-size: 36px; color: #eee; margin-bottom: 15px;">ただいま安全点検（または調整）を行っております。</div>
+    <div class="overlay-text2" style="font-size: 30px; color: #bbb;">運転再開までしばらくお待ちください。</div>
 </div>
 
 <div class="container">
@@ -156,86 +222,47 @@ Last Update --
 
 import { db, ref, onValue } from "./firebase.js";
 
-const normalWait =
-    document.getElementById("normalWait");
-
-const singleWait =
-    document.getElementById("singleWait");
-
-const ticketTime =
-    document.getElementById("ticketTime");
-
-const updateTime =
-    document.getElementById("updateTime");
-
-const overlay = 
-    document.getElementById("suspensionOverlay");
+const normalWait = document.getElementById("normalWait");
+const singleWait = document.getElementById("singleWait");
+const ticketTime = document.getElementById("ticketTime");
+const updateTime = document.getElementById("updateTime");
+const overlay = document.getElementById("suspensionOverlay");
 
 function calcNormal(people){
-
-    return Math.max(
-        5,
-        Math.ceil(people / 8) * 5
-    );
+    return Math.max(5, Math.ceil(people / 8) * 5);
 }
 
 function calcSingle(people){
-
-    return Math.max(
-        5,
-        Math.ceil(people / 4) * 5
-    );
+    return Math.max(5, Math.ceil(people / 4) * 5);
 }
 
 function getColor(minutes){
-
-    if(minutes <= 20){
-        return "#00cc66";
-    }
-
-    if(minutes <= 40){
-        return "#ffcc00";
-    }
-
+    if(minutes <= 20){ return "#00cc66"; }
+    if(minutes <= 40){ return "#ffcc00"; }
     return "#ff8800";
 }
 
 onValue(ref(db, "waitData"), (snapshot) => {
-
     const data = snapshot.val();
-
     if(!data) return;
 
-    // 一時休止フラグのチェック
     if (data.isSuspended) {
         overlay.style.display = "flex";
     } else {
         overlay.style.display = "none";
     }
 
-    const normalMinutes =
-        calcNormal(data.normalPeople);
+    const normalMinutes = calcNormal(data.normalPeople);
+    const singleMinutes = calcSingle(data.singlePeople);
 
-    const singleMinutes =
-        calcSingle(data.singlePeople);
+    normalWait.innerText = `約${normalMinutes}分`;
+    singleWait.innerText = `約${singleMinutes}分`;
 
-    normalWait.innerText =
-        `約${normalMinutes}分`;
+    normalWait.style.color = getColor(normalMinutes);
+    singleWait.style.color = getColor(singleMinutes);
 
-    singleWait.innerText =
-        `約${singleMinutes}分`;
-
-    normalWait.style.color =
-        getColor(normalMinutes);
-
-    singleWait.style.color =
-        getColor(singleMinutes);
-
-    ticketTime.innerText =
-        data.ticketTime;
-
-    updateTime.innerText =
-        `Last Update ${data.updatedAt}`;
+    ticketTime.innerText = data.ticketTime;
+    updateTime.innerText = `Last Update ${data.updatedAt}`;
 });
 
 </script>
