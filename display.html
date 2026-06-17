@@ -192,7 +192,7 @@ body{
 <body>
 
 <div id="videoContainer" class="video-container">
-    <video id="safetyVideo" src="safety-video.mp4" playsinline muted></video>
+    <video id="safetyVideo" src="safety-video.mp4" playsinline></video>
 </div>
 
 <div id="suspensionOverlay" class="overlay">
@@ -308,7 +308,7 @@ onValue(ref(db, "waitData"), (snapshot) => {
 // 追加：動画の再生・停止・切り替えロジック
 // ========================================================
 
-const DISPLAY_TIME = 5 * 60 * 1000; // 待ち時間を表示する時間（5分 = 300,000ms）
+const DISPLAY_TIME = 2 * 60 * 1000; // 待ち時間を表示する時間（5分 = 300,000ms）
 let isSuspendedState = false;
 
 // 動画を再生して画面を切り替える関数
