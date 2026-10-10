@@ -1,0 +1,593 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>キャッチャー配球チェックシート</title>
+<style>
+:root {
+  --navy:#14283e;
+  --teal:#087e83;
+  --bg:#eef3f7;
+  --line:#d2dee6;
+}
+* {box-sizing:border-box}
+body {
+  margin:0;
+  font-family:-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;
+  background:var(--bg);
+  color:#203346;
+}
+header {
+  background:var(--navy);
+  color:white;
+  padding:20px 16px;
+}
+header h1 {font-size:20px;margin:0}
+header p {font-size:12px;opacity:.8}
+main {max-width:750px;margin:auto;padding:14px 12px 100px}
+.card {
+  background:white;
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin-bottom:12px;
+}
+h2 {font-size:17px;margin:0 0 14px}
+h3 {font-size:14px}
+label {display:block;font-size:13px;margin:10px 0}
+input,select,textarea {
+  display:block;
+  width:100%;
+  font:inherit;
+  font-size:15px;
+  border:1px solid #b9cbd6;
+  border-radius:8px;
+  padding:10px;
+  margin-top:5px;
+  background:white;
+}
+textarea {min-height:75px;resize:vertical}
+button {
+  font:inherit;
+  border:1px solid var(--line);
+  border-radius:9px;
+  padding:10px 12px;
+  background:white;
+  cursor:pointer;
+}
+button.primary {
+  background:var(--teal);
+  color:white;
+  border-color:var(--teal);
+}
+button.selected {
+  background:var(--navy);
+  color:white;
+}
+.row {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grid {display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pitch {
+  display:grid;
+  grid-template-columns:1fr 80px 80px;
+  gap:7px;
+  align-items:center;
+  border-bottom:1px solid var(--line);
+  padding:9px 0;
+}
+.pitch select {font-size:13px;padding:7px}
+.pitch b {font-size:13px}
+.batters {display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.batters button {min-height:60px}
+.tags {display:flex;flex-wrap:wrap;gap:6px}
+.tags button {font-size:12px;border-radius:30px}
+.small {font-size:12px;color:#607282}
+.log {
+  padding:12px 0;
+  border-bottom:1px solid var(--line);
+  font-size:13px;
+}
+nav {
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:white;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line);
+}
+nav button {border:0;font-size:12px;padding:8px 2px}
+nav button.selected {background:#ddf2f0;color:#006970}
+@media print {
+  nav {display:none}
+  main {padding-bottom:0}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚾ キャッチャー配球メモ</h1>
+  <p>今日の球種 × 打者の反応 × 次打席の攻略</p>
+</header>
+
+<main id="app"></main>
+
+<nav>
+  <button onclick="page='strategy';render()">📋<br>作戦</button>
+  <button onclick="page='batters';render()">👀<br>打者</button>
+  <button onclick="page='logs';render()">⚾<br>打席</button>
+  <button onclick="page='review';render()">📝<br>振り返り</button>
+</nav>
+
+<script>
+const KEY = "catcher-sheet-v1";
+
+const DEFAULT_PITCHES = [
+  "ストレート","ツーシーム","カット",
+  "スライダー（横）","スライダー（縦）",
+  "カーブ","フォーク"
+];
+
+const REACTIONS = [
+  "差し込まれ","泳ぐ","空振り",
+  "見逃し","強い打球","ファウル",
+  "ボール球を振る","変化球に合う"
+];
+
+function newPitcher(name="投手1") {
+  return {
+    id:crypto.randomUUID(),
+    name,
+    pitches:DEFAULT_PITCHES.map(name=>({
+      name,control:"",quality:""
+    })),
+    countBall:"",
+    finishBall:"",
+    avoidBall:"",
+    notes:""
+  };
+}
+
+function initialData() {
+  const p=newPitcher();
+  return {
+    date:new Date().toLocaleDateString("sv-SE"),
+    opponent:"",
+    pitchers:[p],
+    active:p.id,
+    batters:Array.from({length:9},(_,i)=>({
+      order:i+1,
+      name:"",
+      hand:"不明",
+      reactions:[],
+      notes:"",
+      plan:""
+    })),
+    logs:[],
+    reviews:""
+  };
+}
+
+let data;
+try {
+  data=JSON.parse(localStorage.getItem(KEY));
+  if(!data?.pitchers?.length || data.batters?.length!==9)
+    data=initialData();
+} catch {
+  data=initialData();
+}
+
+let page="strategy";
+let batterIndex=0;
+let selectedReactions=[];
+
+function pitcher() {
+  return data.pitchers.find(p=>p.id===data.active)
+    ||data.pitchers[0];
+}
+
+function save() {
+  try {
+    localStorage.setItem(KEY,JSON.stringify(data));
+  } catch(e) {
+    alert("端末に保存できません。JSONを出力してください。");
+  }
+}
+
+function esc(s) {
+  return String(s??"").replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",
+    '"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function options(arr,value) {
+  return arr.map(x=>`
+    <option ${x===value?"selected":""}>${esc(x)}</option>
+  `).join("");
+}
+
+function field(label,value,callback,type="text") {
+  return `<label>${label}
+    <input type="${type}" value="${esc(value)}"
+      onchange="${callback}(this.value)">
+  </label>`;
+}
+
+function render() {
+  const app=document.getElementById("app");
+  app.innerHTML=({
+    strategy:renderStrategy,
+    batters:renderBatters,
+    logs:renderLogs,
+    review:renderReview
+  })[page]();
+
+  document.querySelectorAll("nav button").forEach((b,i)=>{
+    b.classList.toggle("selected",i===
+      ["strategy","batters","logs","review"].indexOf(page));
+  });
+}
+
+function setMeta(key,value) {
+  data[key]=value;save();
+}
+function setPitcher(key,value) {
+  pitcher()[key]=value;save();
+}
+function setPitch(index,key,value) {
+  pitcher().pitches[index][key]=value;
+  save();
+}
+
+// ── 作戦画面 ──
+
+function renderStrategy() {
+  const p=pitcher();
+  return `
+  <div class="card">
+    <h2>① 試合情報</h2>
+    <div class="grid">
+      ${field("日付",data.date,"v=>setMeta('date',v)","date")}
+      ${field("対戦相手",data.opponent,"v=>setMeta('opponent',v)")}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>② 投手の状態</h2>
+    <label>投手選択
+      <select onchange="data.active=this.value;save();render()">
+        ${data.pitchers.map(x=>`
+          <option value="${x.id}" ${x.id===p.id?"selected":""}>
+            ${esc(x.name)}
+          </option>`).join("")}
+      </select>
+    </label>
+    ${field("投手名",p.name,"v=>setPitcher('name',v)")}
+    <button onclick="addPitcher()">＋ 投手を追加</button>
+  </div>
+
+  <div class="card">
+    <h2>③ 球種チェック</h2>
+    <p class="small">◎ とても良い / ○ 普通 / △ 不安 / × 使いにくい</p>
+    <div class="pitch">
+      <b>球種</b><b>制球</b><b>キレ</b>
+    </div>
+    ${p.pitches.map((x,i)=>`
+      <div class="pitch">
+        <b>${esc(x.name)}</b>
+        <select onchange="setPitch(${i},'control',this.value)">
+          ${options(["","◎","○","△","×"],x.control)}
+        </select>
+        <select onchange="setPitch(${i},'quality',this.value)">
+          ${options(["","◎","○","△","×"],x.quality)}
+        </select>
+      </div>`).join("")}
+
+    <div class="row" style="margin-top:12px">
+      <input id="newPitch" placeholder="追加球種：シュートなど">
+      <button onclick="addPitch()">追加</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>④ 今日の配球方針</h2>
+    ${field("カウントを取る球",p.countBall,"v=>setPitcher('countBall',v)")}
+    ${field("決め球",p.finishBall,"v=>setPitcher('finishBall',v)")}
+    ${field("避けたい球",p.avoidBall,"v=>setPitcher('avoidBall',v)")}
+    <label>その他・注意事項
+      <textarea oninput="setPitcher('notes',this.value)">${esc(p.notes)}</textarea>
+    </label>
+  </div>`;
+}
+
+function addPitcher() {
+  const name=prompt("投手名を入力");
+  if(!name)return;
+  const p=newPitcher(name);
+  data.pitchers.push(p);
+  data.active=p.id;
+  save();render();
+}
+
+function addPitch() {
+  const name=document.getElementById("newPitch").value.trim();
+  if(!name)return;
+  if(pitcher().pitches.some(x=>x.name===name))return;
+  pitcher().pitches.push({name,control:"",quality:""});
+  save();render();
+}
+
+// ── 打者分析画面 ──
+
+function setBatter(key,value) {
+  data.batters[batterIndex][key]=value;
+  save();
+}
+
+function renderBatters() {
+  const b=data.batters[batterIndex];
+  return `
+  <div class="card">
+    <h2>① 相手打順</h2>
+    <div class="batters">
+      ${data.batters.map((x,i)=>`
+        <button class="${batterIndex===i?"selected":""}"
+          onclick="batterIndex=${i};render()">
+          <b>${i+1}番</b><br>${esc(x.name||"未登録")}
+        </button>`).join("")}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>② ${batterIndex+1}番打者の分析</h2>
+    ${field("打者名・背番号",b.name,"v=>setBatter('name',v)")}
+    <label>打席
+      <select onchange="setBatter('hand',this.value)">
+        ${options(["不明","右","左","両"],b.hand)}
+      </select>
+    </label>
+
+    <h3>スイング・反応</h3>
+    <div class="tags">
+      ${REACTIONS.map(t=>`
+        <button class="${b.reactions.includes(t)?"selected":""}"
+          onclick="toggleBatterReaction('${t}')">${t}</button>
+      `).join("")}
+    </div>
+
+    <label>観察メモ
+      <textarea oninput="setBatter('notes',this.value)"
+        placeholder="例：外角直球に振り遅れる">${esc(b.notes)}</textarea>
+    </label>
+    <label>次の打席での攻め方
+      <textarea oninput="setBatter('plan',this.value)"
+        placeholder="例：外角の直球を見せて低めの変化球">${esc(b.plan)}</textarea>
+    </label>
+  </div>`;
+}
+
+function toggleBatterReaction(t) {
+  const b=data.batters[batterIndex];
+  b.reactions=b.reactions.includes(t)
+    ?b.reactions.filter(x=>x!==t)
+    :[...b.reactions,t];
+  save();render();
+}
+
+// ── 打席ログ画面 ──
+
+function renderLogs() {
+  const p=pitcher();
+  return `
+  <div class="card">
+    <h2>① 打席を記録</h2>
+    <label>打順
+      <select id="logBatter">
+        ${data.batters.map((b,i)=>`
+          <option value="${i}">${i+1}番 ${esc(b.name)}</option>
+        `).join("")}
+      </select>
+    </label>
+    <div class="grid">
+      <label>イニング
+        <input id="inning" type="number" min="1" value="1">
+      </label>
+      <label>アウト
+        <select id="outs">${options(["0","1","2"],"0")}</select>
+      </label>
+    </div>
+    <label>投手
+      <select id="logPitcher">
+        ${data.pitchers.map(x=>`
+          <option value="${x.id}" ${x.id===p.id?"selected":""}>
+            ${esc(x.name)}
+          </option>`).join("")}
+      </select>
+    </label>
+
+    <div class="grid">
+      <label>球種
+        <select id="logPitch">
+          ${p.pitches.map(x=>`
+            <option>${esc(x.name)}</option>`).join("")}
+        </select>
+      </label>
+      <label>コース
+        <select id="zone">
+          ${options([
+            "内高","内低","外高","外低",
+            "真ん中","ボールゾーン","不明"
+          ],"不明")}
+        </select>
+      </label>
+    </div>
+
+    <label>カウント
+      <select id="count">
+        ${options([
+          "0-0","0-1","0-2","1-0","1-1","1-2",
+          "2-0","2-1","2-2","3-0","3-1","3-2"
+        ],"0-0")}
+      </select>
+    </label>
+
+    <label>打席結果
+      <select id="result">
+        ${options([
+          "三振","四球","見逃し","空振り",
+          "ファウル","ゴロアウト","フライアウト",
+          "ヒット","長打","死球","その他"
+        ],"三振")}
+      </select>
+    </label>
+
+    <h3>打者の反応</h3>
+    <div class="tags">
+      ${REACTIONS.map(t=>`
+        <button id="tag-${t}"
+          class="${selectedReactions.includes(t)?"selected":""}"
+          onclick="toggleDraft('${t}')">${t}</button>
+      `).join("")}
+    </div>
+
+    <label>追加メモ
+      <textarea id="logMemo"
+        placeholder="例：外角直球を引っ張ってファウル"></textarea>
+    </label>
+    <button class="primary" onclick="addLog()">＋ 記録を保存</button>
+  </div>
+
+  <div class="card">
+    <h2>② 記録一覧（${data.logs.length}件）</h2>
+    ${data.logs.slice().reverse().map(x=>`
+      <div class="log">
+        <b>${esc(x.inning)}回・${x.batter+1}番</b>
+        ${esc(x.pitch)} / ${esc(x.zone)} / ${esc(x.count)}<br>
+        <b>${esc(x.result)}</b>
+        <span class="small">${esc(x.reactions.join("、"))}</span><br>
+        ${esc(x.memo)}
+        <div style="margin-top:6px">
+          <button onclick="deleteLog('${x.id}')">削除</button>
+        </div>
+      </div>
+    `).join("")||"<p class='small'>まだ記録はありません。</p>"}
+  </div>`;
+}
+
+function toggleDraft(t) {
+  selectedReactions=selectedReactions.includes(t)
+    ?selectedReactions.filter(x=>x!==t)
+    :[...selectedReactions,t];
+  document.getElementById("tag-"+t)
+    .classList.toggle("selected",selectedReactions.includes(t));
+}
+
+function addLog() {
+  const get=id=>document.getElementById(id).value;
+  const b=Number(get("logBatter"));
+  const entry={
+    id:crypto.randomUUID(),
+    batter:b,
+    pitcher:get("logPitcher"),
+    inning:get("inning"),
+    outs:get("outs"),
+    pitch:get("logPitch"),
+    zone:get("zone"),
+    count:get("count"),
+    result:get("result"),
+    reactions:[...selectedReactions],
+    memo:get("logMemo")
+  };
+  data.logs.push(entry);
+  const target=data.batters[b];
+  target.reactions=[
+    ...new Set([...target.reactions,...selectedReactions])
+  ];
+  selectedReactions=[];
+  save();render();
+}
+
+function deleteLog(id) {
+  if(!confirm("この記録を削除しますか？"))return;
+  data.logs=data.logs.filter(x=>x.id!==id);
+  save();render();
+}
+
+// ── 振り返り画面 ──
+
+function renderReview() {
+  return `
+  <div class="card">
+    <h2>イニング間の振り返り</h2>
+    <p class="small">
+      何を狙われたか、どの球が有効だったか、
+      次のイニングで何を変えるか。
+    </p>
+    <textarea oninput="data.reviews=this.value;save()"
+      placeholder="例：3回から直球を狙われた。次は初球に変化球を増やす。"
+    >${esc(data.reviews)}</textarea>
+  </div>
+  <div class="card">
+    <h2>打者別の次打席作戦</h2>
+    ${data.batters.map(b=>`
+      <div class="log">
+        <b>${b.order}番 ${esc(b.name)}</b><br>
+        ${esc(b.plan||"未記入")}
+      </div>`).join("")}
+  </div>
+  <div class="card">
+    <h2>データ管理</h2>
+    <div class="row">
+      <button class="primary" onclick="exportData()">JSON保存</button>
+      <button onclick="document.getElementById('file').click()">読み込み</button>
+      <button onclick="window.print()">印刷</button>
+      <button onclick="resetData()">新しい試合</button>
+    </div>
+    <input id="file" type="file" accept=".json"
+      style="display:none" onchange="importData(this)">
+    <p class="small">記録はこの端末のブラウザに自動保存されます。</p>
+  </div>`;
+}
+
+function exportData() {
+  const blob=new Blob([JSON.stringify(data,null,2)],{
+    type:"application/json"
+  });
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="配球記録_"+data.date+".json";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+async function importData(input) {
+  const f=input.files[0];
+  if(!f)return;
+  try {
+    const obj=JSON.parse(await f.text());
+    if(!Array.isArray(obj.pitchers)||!obj.pitchers.length||
+       !Array.isArray(obj.batters)||obj.batters.length!==9||
+       !Array.isArray(obj.logs))throw Error("形式が違います");
+    if(!confirm("現在の記録を読み込んだデータに置き換えますか？"))return;
+    data=obj;save();render();
+  } catch(e) {
+    alert("読み込みに失敗しました："+e.message);
+  }
+}
+
+function resetData() {
+  if(!confirm("新しい試合を作成しますか？現在の記録は消えます。先にJSON保存をおすすめします。"))return;
+  data=initialData();
+  save();render();
+}
+
+render();
+</script>
+</body>
+</html>
